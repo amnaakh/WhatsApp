@@ -132,6 +132,7 @@ export default function MyProfil(props) {
       const ref_unProfil = ref_tableProfils.child(currentId);
   
       await ref_unProfil.update({
+        id:currentId,
         nom,
         pseudo,
         telephone,

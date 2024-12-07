@@ -16,7 +16,7 @@ export default function Authentification({ navigation }) {
       auth
         .signInWithEmailAndPassword(email, pwd)
         .then(() => {
-          const currentId = auth.currentUser?.uid;
+          const currentId = auth.currentUser.uid;
           if (currentId) {
             navigation.replace("Home", { currentId });
           } else {
