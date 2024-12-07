@@ -13,6 +13,7 @@ import { fonts, colors } from "../../Styles/styles";
 import firebase from "../../Config";
 
 const database = firebase.database();
+const auth = firebase.auth();
 const ref_tableProfils = database.ref("TableProfils");
 
 export default function ListProfil({ route, navigation }) {
@@ -20,24 +21,43 @@ export default function ListProfil({ route, navigation }) {
   const [currentUser, setCurrentUser] = useState(null);
   const { currentId } = route.params;
 
-  // Récupération des profils et de l'utilisateur actuel
+  // Récupération de l'utilisateur connecté (authStateChanged)
   useEffect(() => {
-    const listener = ref_tableProfils.on("value", (snapshot) => {
-      const fetchedProfiles = [];
-      snapshot.forEach((childSnapshot) => {
-        const profile = childSnapshot.val();
-        if (profile.id === currentId) {
-          setCurrentUser(profile); // Définir l'utilisateur actuel
-        } else {
-          fetchedProfiles.push(profile); // Ajouter les autres utilisateurs
-        }
-      });
-      setProfiles(fetchedProfiles); // Mettre à jour les profils
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (user) {
+        // L'utilisateur est connecté
+        const userId = user.uid;
+        setCurrentUser({ id: userId, pseudo: user.displayName, email: user.email });
+      } else {
+        // L'utilisateur n'est pas connecté
+        setCurrentUser(null);
+      }
     });
 
-    // Nettoyage de l'écouteur Firebase
-    return () => ref_tableProfils.off("value", listener);
-  }, [currentId]);
+    // Nettoyage de l'abonnement à l'état d'authentification
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Récupérer les profils et mettre à jour les profils
+  useEffect(() => {
+    if (currentUser) {
+      const listener = ref_tableProfils.on("value", (snapshot) => {
+        const fetchedProfiles = [];
+        snapshot.forEach((childSnapshot) => {
+          const profile = childSnapshot.val();
+          if (profile.id === currentId) {
+            setCurrentUser(profile); // Définir l'utilisateur actuel
+          } else {
+            fetchedProfiles.push(profile); // Ajouter les autres utilisateurs
+          }
+        });
+        setProfiles(fetchedProfiles); // Mettre à jour les profils
+      });
+
+      // Nettoyage de l'écouteur Firebase
+      return () => ref_tableProfils.off("value", listener);
+    }
+  }, [currentUser, currentId]);
 
   // Composant de rendu pour chaque profil
   const renderProfileItem = ({ item }) => (
