@@ -1,33 +1,35 @@
 import React from "react";
 import { createMaterialBottomTabNavigator } from "@react-navigation/material-bottom-tabs";
-import { useNavigation } from "@react-navigation/native"; // Pour naviguer programmatiquement
-import Group from "./Home/Group";
+import { useNavigation } from "@react-navigation/native"; 
 import ListProfil from "./Home/ListProfil";
 import MyProfil from "./Home/MyProfil";
-import { colors } from "../Styles/styles"; // Assurez-vous d'importer la couleur des boutons
-import { MaterialCommunityIcons } from "react-native-vector-icons"; // Importer les icônes
-import { Alert } from "react-native"; // Pour demander confirmation avant la déconnexion
-
+import GroupChat from "./GroupChat";
+import { colors } from "../Styles/styles"; 
+import { MaterialCommunityIcons } from "react-native-vector-icons"; 
+import { Alert } from "react-native"; 
+import ListGroup from "./Home/listGroup";
+import NewGroup from "./NewGroup";
+import Group from "./Home/Group";
 const Tab = createMaterialBottomTabNavigator();
 
 export default function Home(props) {
   const currentId = props.route.params.currentId;
-  const navigation = useNavigation(); // Hook pour naviguer
+  const navigation = useNavigation(); 
 
-  // Fonction de déconnexion
+ 
   const handleLogout = () => {
     Alert.alert(
-      "Déconnexion", // Titre de l'alerte
-      "Êtes-vous sûr de vouloir vous déconnecter ?", // Message
+      "Déconnexion", 
+      "Êtes-vous sûr de vouloir vous déconnecter ?", 
       [
         {
-          text: "Annuler", // Bouton pour annuler
+          text: "Annuler", 
           style: "cancel",
         },
         {
           text: "Déconnexion",
           onPress: () => {
-            // Action pour rediriger vers la page d'authentification
+            
             navigation.replace("Authentification");
           },
           style: "destructive",
@@ -39,12 +41,12 @@ export default function Home(props) {
   return (
     <Tab.Navigator
       barStyle={{
-        backgroundColor: colors.buttonColor, // Couleur des boutons
-        shadowColor: "#000", // Ombre noire
-        shadowOffset: { width: 0, height: 2 }, // Décalage de l'ombre
-        shadowOpacity: 0.2, // Transparence de l'ombre
-        shadowRadius: 4, // Rayonnement de l'ombre
-        elevation: 5, // Ombre sur Android
+        backgroundColor: colors.buttonColor, 
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 }, 
+        shadowOpacity: 0.2, 
+        shadowRadius: 4, 
+        elevation: 5,
       }}
     >
       <Tab.Screen
@@ -52,10 +54,10 @@ export default function Home(props) {
         component={ListProfil}
         initialParams={{ currentId: currentId }}
         options={{
-          tabBarLabel: "Profils", // Label de l'onglet
+          tabBarLabel: "Profils", 
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              name="account-multiple" // Icône représentant plusieurs comptes
+              name="account-multiple" 
               color={color}
               size={26}
             />
@@ -65,26 +67,44 @@ export default function Home(props) {
       <Tab.Screen
         name="Group"
         component={Group}
+        initialParams={{ currentId: currentId, }}
         options={{
-          tabBarLabel: "Groupes", // Label de l'onglet
+          tabBarLabel: "Group", 
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              name="account-group" // Icône représentant un groupe d'utilisateurs
+              name="account-group" 
               color={color}
               size={26}
             />
           ),
         }}
       />
+
+<Tab.Screen
+        name="NewGroup"
+        component={NewGroup}
+        initialParams={{ currentId: currentId }}
+        options={{
+          tabBarLabel: "New Group", 
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons
+              name="account-multiple-plus" 
+              color={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+
       <Tab.Screen
         name="MyProfil"
         component={MyProfil}
         initialParams={{ currentId: currentId }}
         options={{
-          tabBarLabel: "Mon Profil", // Label de l'onglet
+          tabBarLabel: "Mon Profil", 
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              name="account" // Icône représentant un utilisateur
+              name="account" 
               color={color}
               size={26}
             />
@@ -93,15 +113,15 @@ export default function Home(props) {
       />
       <Tab.Screen
         name="Logout"
-        component={() => null} // Pas de composant spécifique
+        component={() => null}
         listeners={{
-          tabPress: handleLogout, // Appeler handleLogout lors de l'appui
+          tabPress: handleLogout, 
         }}
         options={{
-          tabBarLabel: "Déconnexion", // Label de l'onglet
+          tabBarLabel: "Déconnexion", 
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
-              name="logout" // Icône pour la déconnexion
+              name="logout"
               color={color}
               size={26}
             />

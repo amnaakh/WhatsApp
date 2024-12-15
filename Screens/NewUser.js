@@ -88,9 +88,13 @@ export default function NewUser({ navigation }) {
           gap: 15,
         }}
       >
-        <TouchableOpacity style={layout.button} onPress={handleRegister}>
-          <Text style={fonts.buttonText}>S'inscrire</Text>
-        </TouchableOpacity>
+       <TouchableOpacity
+  style={[layout.button, { width: 135, height: 60, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }]}
+  onPress={handleRegister}
+>
+  <Text style={[fonts.buttonText, { fontSize: 18 }]}>S'inscrire</Text>
+</TouchableOpacity>
+
 
         <TouchableOpacity
           style={[layout.button, { backgroundColor: "#f07578" }]}

@@ -7,13 +7,13 @@ import {
   TextInput,
   TouchableHighlight,
   Image,
+  Linking,
 } from "react-native";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
 import React, { useState, useEffect } from "react";
 import { fonts, layout, colors } from "../Styles/styles";
 import firebase from "../Config";
-import { Linking } from "react-native"; // Importer Linking
 
 const database = firebase.database();
 const ref_lesdiscussions = database.ref("lesdiscussions");
@@ -72,9 +72,10 @@ export default function Chat(props) {
       time: new Date().toLocaleString(),
       sender: currentUser.id,
       receiver: secondUser.id,
+      seen: false, 
     });
 
-    // Réinitialiser l'état après envoi
+    
     setMsg("");
     ref_currentUserTyping.set(false);
   };
@@ -89,9 +90,12 @@ export default function Chat(props) {
     }
   };
 
+
+
+
+  /// location 
   const sendLocation = async () => {
     try {
-      // Étape 1: Demander la permission pour accéder à la localisation
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -100,30 +104,28 @@ export default function Chat(props) {
         );
         return;
       }
-  
-      // Étape 2: Obtenir la localisation actuelle
+
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
       const { latitude, longitude } = location.coords;
-  
-      // Étape 3: Construire l'objet du message avec la localisation
+
+      // Construire un lien Google Maps valide
+      const locationURL = `https://www.google.com/maps?q=${latitude},${longitude}`;
       const locationMessage = {
-        body: `Location: https://www.google.com/maps?q=${latitude},${longitude}`,
+        body: locationURL,
         time: new Date().toLocaleString(),
-        sender: currentUser.id, // Remplacer par l'ID de l'utilisateur actuel
-        receiver: secondUser.id, // Remplacer par l'ID de l'utilisateur destinataire
+        sender: currentUser.id,
+        receiver: secondUser.id,
+        seen: false,
       };
-  
-      // Étape 4: Envoyer le message à la base de données
-      const key = ref_unediscussion.push().key; // Générer une clé unique pour le message
+
+      const key = ref_unediscussion.push().key;
       const ref_unmsg = ref_unediscussion.child(key);
       await ref_unmsg.set(locationMessage);
-  
-      // Étape 5: Confirmer l'envoi à l'utilisateur
+
       Alert.alert("Succès", "La localisation a été envoyée avec succès !");
     } catch (error) {
-      // Étape 6: Gestion des erreurs
       console.error("Erreur lors de l'envoi de la localisation :", error);
       Alert.alert(
         "Erreur",
@@ -131,7 +133,28 @@ export default function Chat(props) {
       );
     }
   };
-  
+
+
+// Seen 
+  const markMessagesAsSeen = () => {
+    ref_unediscussion.once("value", (snapshot) => {
+      snapshot.forEach((msgSnapshot) => {
+        const msgKey = msgSnapshot.key;
+        const message = msgSnapshot.val();
+        if (message.receiver === currentUser.id && !message.seen) {
+          // Mark message as seen
+          ref_unediscussion.child(msgKey).update({ seen: true });
+        }
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (currentUser.id === secondUser.id) return; // Don't mark as seen if the same user
+
+    // Mark messages as seen when the second user opens the chat
+    markMessagesAsSeen();
+  }, [currentUser.id]);
 
   return (
     <View style={styles.mainContainer}>
@@ -140,65 +163,67 @@ export default function Chat(props) {
         style={styles.container}
       >
         <Text style={styles.headerText}>
-          Chat {currentUser.nom} {secondUser.nom}
+          Chat {currentUser.nom} {currentUser.pseudo}
         </Text>
 
         <FlatList
-  style={styles.messagesContainer}
-  data={data}
-  renderItem={({ item, index }) => {
-    const isCurrentUser = item.sender === currentUser.id;
-    const color = isCurrentUser ? "#FFF" : "#444";
-    const textColor = isCurrentUser ? colors.buttonColor : "#fff";
+          style={styles.messagesContainer}
+          data={data}
+          renderItem={({ item, index }) => {
+            const isCurrentUser = item.sender === currentUser.id;
+            const color = isCurrentUser ? "#FFF" : "#444";
+            const textColor = isCurrentUser ? colors.buttonColor : "#fff";
+            const seenStatus = item.seen ? "Seen" : "Not seen"; // Display the seen status
 
-    const profileImage = isCurrentUser
-      ? currentUser.uriImage
-      : secondUser.uriImage;
+            const profileImage = isCurrentUser
+              ? currentUser.uriImage
+              : secondUser.uriImage;
 
-    const showProfileImage =
-      index === 0 || item.sender !== data[index - 1].sender;
+            const showProfileImage =
+              index === 0 || item.sender !== data[index - 1].sender;
 
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          {
-            flexDirection: isCurrentUser ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        {showProfileImage && profileImage ? (
-          <Image
-            source={{ uri: profileImage }}
-            style={styles.profileImage}
-          />
-        ) : (
-          <View style={styles.profileImage} />
-        )}
-        <View style={[styles.message, { backgroundColor: color }]}>
-          <View style={styles.messageContent}>
-            {item.body.includes("https://www.google.com/maps") ? (
-              // Si le message contient un lien Google Maps, rendre cliquable
-              <TouchableHighlight
-                underlayColor="#555"
-                onPress={() => Linking.openURL(item.body)}
+            return (
+              <View
+                style={[
+                  styles.messageContainer,
+                  {
+                    flexDirection: isCurrentUser ? "row-reverse" : "row",
+                  },
+                ]}
               >
-                <Text style={[styles.messageText, { color: textColor }]}>
-                  {item.body}
-                </Text>
-              </TouchableHighlight>
-            ) : (
-              <Text style={[styles.messageText, { color: textColor }]}>
-                {item.body}
-              </Text>
-            )}
-            <Text style={styles.messageTime}>{item.time}</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }}
-/>
+                {showProfileImage && profileImage ? (
+                  <Image
+                    source={{ uri: profileImage }}
+                    style={styles.profileImage}
+                  />
+                ) : (
+                  <View style={styles.profileImage} />
+                )}
+                <View style={[styles.message, { backgroundColor: color }]}>
+                  <View style={styles.messageContent}>
+                    {item.body.includes("https://www.google.com/maps") ? (
+                      <TouchableHighlight
+                        underlayColor="#555"
+                        onPress={() => Linking.openURL(item.body)}
+                      >
+                        <Text style={[styles.messageText, { color: textColor }]}>
+                          {item.body}
+                        </Text>
+                      </TouchableHighlight>
+                    ) : (
+                      <Text style={[styles.messageText, { color: textColor }]}>
+                        {item.body}
+                      </Text>
+                    )}
+                    <Text style={styles.messageTime}>
+                      {item.time} - {seenStatus}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }}
+        />
 
         {secondUserTyping && (
           <Text style={{ color: "#fff", marginBottom: 5 }}>
@@ -226,18 +251,16 @@ export default function Chat(props) {
           </TouchableHighlight>
 
           <TouchableHighlight
-  activeOpacity={0.5}
-  underlayColor="#555"
-  style={styles.sendButton}
-  onPress={sendLocation}
->
-  <Image
-    source={require("../assets/output-onlinepngtools.png")}
-    style={styles.locationIcon}
-    
-  />
-</TouchableHighlight>
-
+            activeOpacity={0.5}
+            underlayColor="#555"
+            style={styles.sendButton}
+            onPress={sendLocation}
+          >
+            <Image
+              source={require("../assets/output-onlinepngtools.png")}
+              style={styles.locationIcon}
+            />
+          </TouchableHighlight>
         </View>
       </ImageBackground>
     </View>
@@ -255,11 +278,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   locationIcon: {
-    width: 20,  // Largeur réduite
-    height: 20, // Hauteur réduite
-    resizeMode: "contain", // Pour s'assurer que l'image garde ses proportions
-    tintColor: "#fff", 
-    resizeMode: "contain",// Facultatif : changer la couleur de l'icône si nécessaire
+    width: 20,
+    height: 20,
+    resizeMode: "contain",
+    tintColor: "#fff",
   },
   headerText: {
     marginTop: 50,
@@ -277,17 +299,23 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     flexDirection: "row",
-    marginBottom: 10,
+    marginBottom: 15,
+  },
+  profileImage: {
+    width: 35,
+    height: 35,
+    borderRadius: 100,
+    margin: 5,
   },
   message: {
     padding: 10,
-    marginVertical: 0,
-    borderRadius: 8,
+    borderRadius: 10,
     maxWidth: "80%",
+    minWidth: "20%",
+    marginVertical: 5,
   },
   messageContent: {
     flexDirection: "column",
-    alignItems: "flex-start",
   },
   messageText: {
     fontSize: 16,
@@ -295,45 +323,32 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 12,
     color: "#aaa",
-    marginTop: 5,
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 50,
-    marginRight: 5,
-    marginLeft: 5,
-    marginTop: 5,
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    marginHorizontal: 10,
+    justifyContent: "space-between",
+    marginTop: 15,
   },
   textinput: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    color: "#fff",
-    height: 50,
-    fontSize: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    marginRight: 10,
+    backgroundColor: "#fff",
+    color: "#333",
+    borderRadius: 25,
+    width: "80%",
+    height: 40,
+    paddingLeft: 15,
   },
   sendButton: {
+    backgroundColor: colors.buttonColor,
+    borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.buttonColor,
-    borderRadius: 10,
-    height: 50,
-    width: "20%",
-    marginRight:5,
+    height: 40,
+    width: 40,
+    marginLeft: 10,
   },
   sendButtonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
   },
 });

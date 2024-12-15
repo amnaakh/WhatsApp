@@ -13,53 +13,55 @@ import { fonts, colors } from "../../Styles/styles";
 import firebase from "../../Config";
 
 const database = firebase.database();
-const auth = firebase.auth();
 const ref_tableProfils = database.ref("TableProfils");
 
 export default function ListProfil({ route, navigation }) {
   const [profiles, setProfiles] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [connectedUsers, setConnectedUsers] = useState({});  // Track online status of users
   const { currentId } = route.params;
 
-  // Récupération de l'utilisateur connecté (authStateChanged)
+  // Listen to the current user's online status and set it to Firebase
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (user) {
-        // L'utilisateur est connecté
-        const userId = user.uid;
-        setCurrentUser({ id: userId, pseudo: user.displayName, email: user.email });
-      } else {
-        // L'utilisateur n'est pas connecté
-        setCurrentUser(null);
-      }
+    const userRef = firebase.database().ref(`onlineStatus/${currentId}`);
+    userRef.set(true);  // Set user as online in Firebase
+
+    // Clean up when the user logs out or component unmounts
+    return () => {
+      userRef.set(false); // Set user as offline when leaving the component
+    };
+  }, [currentId]);
+
+  // Fetch profiles and set online status for each user
+  useEffect(() => {
+    const listener = ref_tableProfils.on("value", (snapshot) => {
+      const fetchedProfiles = [];
+      snapshot.forEach((childSnapshot) => {
+        const profile = childSnapshot.val();
+        if (profile.id === currentId) {
+          setCurrentUser(profile); 
+        } else {
+          fetchedProfiles.push(profile);  // Add other profiles
+        }
+      });
+      setProfiles(fetchedProfiles);  // Update profiles list
     });
 
-    // Nettoyage de l'abonnement à l'état d'authentification
-    return () => unsubscribeAuth();
-  }, []);
+    // Monitor online status updates
+    const onlineStatusRef = database.ref("onlineStatus");
+    onlineStatusRef.on("value", (snapshot) => {
+      const onlineData = snapshot.val() || {};
+      setConnectedUsers(onlineData);  // Update online status
+    });
 
-  // Récupérer les profils et mettre à jour les profils
-  useEffect(() => {
-    if (currentUser) {
-      const listener = ref_tableProfils.on("value", (snapshot) => {
-        const fetchedProfiles = [];
-        snapshot.forEach((childSnapshot) => {
-          const profile = childSnapshot.val();
-          if (profile.id === currentId) {
-            setCurrentUser(profile); // Définir l'utilisateur actuel
-          } else {
-            fetchedProfiles.push(profile); // Ajouter les autres utilisateurs
-          }
-        });
-        setProfiles(fetchedProfiles); // Mettre à jour les profils
-      });
+    // Clean up Firebase listeners when component unmounts
+    return () => {
+      ref_tableProfils.off("value", listener);
+      onlineStatusRef.off("value");
+    };
+  }, [currentId]);
 
-      // Nettoyage de l'écouteur Firebase
-      return () => ref_tableProfils.off("value", listener);
-    }
-  }, [currentUser, currentId]);
-
-  // Composant de rendu pour chaque profil
+  // Render each profile
   const renderProfileItem = ({ item }) => (
     <View style={styles.profileCard}>
       <Image
@@ -75,6 +77,11 @@ export default function ListProfil({ route, navigation }) {
           {item.pseudo || "Pseudo indisponible"}
         </Text>
         <Text style={styles.profileName}>{item.nom || "Nom indisponible"}</Text>
+
+        {/* Display online/offline status */}
+        <Text style={styles.statusText}>
+          {connectedUsers[item.id] ? "(Online)" : "(Offline)"}
+        </Text>
       </View>
       <TouchableOpacity
         style={styles.chatButton}
@@ -146,6 +153,10 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 14,
     color: "#cdcdcd",
+  },
+  statusText: {
+    fontSize: 12,
+    color: "#4CAF50",  // Green color for "Online"
   },
   chatButton: {
     backgroundColor: colors.buttonColor,

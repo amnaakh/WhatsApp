@@ -6,8 +6,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { colors } from "./Styles/styles"; // Importer les couleurs
 import MyProfil from "./Screens/Home/MyProfil";
+import Group from "./Screens/Home/Group";
+import ListGroup from "./Screens/Home/listGroup";
+import NewGroup from "./Screens/NewGroup";
+import GroupChat from "./Screens/GroupChat";
 
 const Stack = createNativeStackNavigator();
+
 
 export default function App() {
   return (
@@ -17,6 +22,7 @@ export default function App() {
           headerShown: false, 
         }}
       >
+        
         <Stack.Screen
           name="Authentification"
           component={Authentification}
@@ -33,17 +39,36 @@ export default function App() {
             title: "Retour à authentification", 
           }}
         />
+         <Stack.Screen
+          name="NewGroup"
+          component={NewGroup}
+        />
         <Stack.Screen
           name="Home"
           component={Home}
         />
-        <Stack.Screen
-          name="MyProfil"
-          component={MyProfil}
+         <Stack.Screen
+          name="Group"
+          component={Group}
         />
+         <Stack.Screen
+          name="GroupChat"
+          component={GroupChat}
+        />
+
+<Stack.Screen
+          name="ListGroup"
+          component={ListGroup}
+        />
+         
+
         <Stack.Screen
           name="Chat"
           component={Chat}
+        />
+         <Stack.Screen
+          name="MyProfil"
+          component={MyProfil}
         />
       </Stack.Navigator>
     </NavigationContainer>
